@@ -25,7 +25,7 @@ clock = pygame.time.Clock()
 beats = 8
 bpm = 240
 instruments = 6
-playing = True
+playing = False
 active_length = 0
 active_beat = 0
 beat_changed = True
@@ -44,7 +44,7 @@ hi_hat = mixer.Sound('sounds/HiHat 002 - Matty.wav')
 snare = mixer.Sound('sounds/Snare 009 - Modern.wav')
 kick = mixer.Sound('sounds/Kick 016 - Discontinued.wav')
 crash = mixer.Sound('sounds/Crash 001 - Oddity.wav')
-triangle = mixer.Sound('sounds/Triangle 001 - Robo.wav')
+donk = mixer.Sound('sounds/Perc 002 - Solomon.wav')
 floor_tom = mixer.Sound('sounds/tom (1).WAV')
 pygame.mixer.set_num_channels(instruments * 3)
 
@@ -61,7 +61,7 @@ def play_notes():
             if i == 3:
                 crash.play()
             if i == 4:
-                triangle.play()
+                donk.play()
             if i == 5:
                 floor_tom.play()
 
@@ -78,8 +78,8 @@ def draw_grid(clicks, beat, actives):
     screen.blit(kick_text, (30, 230))
     crash_text = label_font.render('Crash', True, colors[actives[3]])
     screen.blit(crash_text, (30, 330))
-    triangle_text = label_font.render('Triangle', True, colors[actives[4]])
-    screen.blit(triangle_text, (30, 430))
+    donk_text = label_font.render('Donk', True, colors[actives[4]])
+    screen.blit(donk_text, (30, 430))
     floor_tom_text = label_font.render('Floor Tom', True, colors[actives[5]])
     screen.blit(floor_tom_text, (30, 530))
     for i in range(instruments - 1):
@@ -108,12 +108,25 @@ def draw_grid(clicks, beat, actives):
         active = pygame.draw.rect(screen, blue, [beat * ((WIDTH - 200) // beats) + 200, 0, ((WIDTH - 200) // beats), instruments * 100], 5, 3)
     return boxes
 
+def draw_save_menu():
+    pygame.draw.rect(screen, black, [0, 0, WIDTH, HEIGHT])
+    exit = pygame.draw.rect(screen, gray, [WIDTH - 200, HEIGHT - 100, 180, 90], 0, 5)
+    exit_text = label_font.render('Close', True, white)
+    screen.blit(exit_text, (WIDTH - 155, HEIGHT - 75))
+    return exit
+
+def draw_load_menu():
+    pygame.draw.rect(screen, black, [0, 0, WIDTH, HEIGHT])
+    exit = pygame.draw.rect(screen, gray, [WIDTH - 200, HEIGHT - 100, 180, 90], 0, 5)
+    exit_text = label_font.render('Close', True, white)
+    screen.blit(exit_text, (WIDTH - 155, HEIGHT - 75))
+    return exit
 
 # main game loop
 run = True
 while run:
     clock.tick(fps)
-    screen.fill(black)    
+    screen.fill(black)
     boxes = draw_grid(clicked, active_beat, active_instruments)
     # lower menu
     play_pause = pygame.draw.rect(screen, gray, [50, HEIGHT - 150, 200, 100], 0, 5)
@@ -164,7 +177,11 @@ while run:
     clear_box = pygame.draw.rect(screen, gray, [1150, HEIGHT - 150, 200, 100], 0, 5)
     clear_text = label_font.render('Clear Board', True, white)
     screen.blit(clear_text, (1170, HEIGHT - 120))
-    
+
+    if save_menu:
+        exit_box = draw_save_menu()
+    if load_menu:
+        exit_box = draw_load_menu()
     if beat_changed:
         play_notes()
         beat_changed = False
@@ -199,12 +216,19 @@ while run:
                 clicked = [[-1 for _ in range(beats)] for _ in range(instruments)]
             elif save_box.collidepoint(event.pos):
                 save_menu = True
-            elif load_menu.collidepoint(event.pos):
+                playing = False
+            elif load_box.collidepoint(event.pos):
                 load_menu = True
+                playing = False
             for i in range(len(instrument_rects)):
                 if instrument_rects[i].collidepoint(event.pos):
                     active_instruments[i] *= -1
-    
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if exit_box.collidepoint(event.pos):
+                save_menu = False
+                load_menu = False
+                playing = False
+
     beat_length = (fps * 60) // bpm 
     if playing:
         if active_length < beat_length:
