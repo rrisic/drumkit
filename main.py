@@ -32,6 +32,12 @@ beat_changed = True
 boxes = []
 clicked = [[-1 for _ in range(beats)] for _ in range(instruments)]
 active_instruments = [1 for _ in range(instruments)]
+save_menu = False
+load_menu = False
+savelist = []
+save_file = open('savelist.txt', 'r')
+for line in save_file:
+    savelist.append(line)
 
 # sounds
 hi_hat = mixer.Sound('sounds/HiHat 002 - Matty.wav')
@@ -136,17 +142,28 @@ while run:
     screen.blit(beats_text, (620, HEIGHT - 142))
     beats_text2 = label_font.render(f'{beats}', True, white)
     screen.blit(beats_text2, (668, HEIGHT - 107))
-    beats_add_rect = pygame.draw.rect(screen, gray, [810, HEIGHT - 150, 48, 48], 0, 5)
-    beats_sub_rect = pygame.draw.rect(screen, gray, [810, HEIGHT - 100, 48, 48], 0, 5)
+    beats_add_rect = pygame.draw.rect(screen, gray, [790, HEIGHT - 150, 48, 48], 0, 5)
+    beats_sub_rect = pygame.draw.rect(screen, gray, [790, HEIGHT - 100, 48, 48], 0, 5)
     add_text2 = big_font.render('+', True, white)
     sub_text2 = big_font.render('-', True, white)
-    screen.blit(add_text2, (819, HEIGHT - 169))
-    screen.blit(sub_text2, (821, HEIGHT - 121))
+    screen.blit(add_text2, (799, HEIGHT - 169))
+    screen.blit(sub_text2, (801, HEIGHT - 121))
     #instrument settings
     instrument_rects = []
     for i in range(instruments):
         rect = pygame.rect.Rect((0, i * 100), (200, 100))
         instrument_rects.append(rect)
+    # save and load
+    save_box = pygame.draw.rect(screen, gray, [900, HEIGHT - 150, 200, 48], 0, 5)
+    load_box = pygame.draw.rect(screen, gray, [900, HEIGHT - 100, 200, 48], 0, 5)
+    save_text = label_font.render('Save Beat', True, white)
+    load_text = label_font.render('Load Beat', True, white)
+    screen.blit(save_text, (933, HEIGHT - 148))
+    screen.blit(load_text, (933, HEIGHT - 98))
+    # clear board
+    clear_box = pygame.draw.rect(screen, gray, [1150, HEIGHT - 150, 200, 100], 0, 5)
+    clear_text = label_font.render('Clear Board', True, white)
+    screen.blit(clear_text, (1170, HEIGHT - 120))
     
     if beat_changed:
         play_notes()
@@ -155,12 +172,12 @@ while run:
     for event in pygame.event.get(): 
         if event.type == pygame.QUIT:
             run = False
-        if event.type == pygame.MOUSEBUTTONDOWN:
+        if event.type == pygame.MOUSEBUTTONDOWN and not save_menu and not load_menu:
             for i in range(len(boxes)):
                 if boxes[i][0].collidepoint(event.pos):
                     coords = boxes[i][1]
                     clicked[coords[1]][coords[0]] *= -1
-        if event.type == pygame.MOUSEBUTTONUP:
+        if event.type == pygame.MOUSEBUTTONUP and not save_menu and not load_menu:
             if play_pause.collidepoint(event.pos):
                 if playing:
                     playing = False
@@ -178,7 +195,12 @@ while run:
                 beats -= 1
                 for i in range(len(clicked)):
                     clicked[i].pop(-1)
-            
+            elif clear_box.collidepoint(event.pos):
+                clicked = [[-1 for _ in range(beats)] for _ in range(instruments)]
+            elif save_box.collidepoint(event.pos):
+                save_menu = True
+            elif load_menu.collidepoint(event.pos):
+                load_menu = True
             for i in range(len(instrument_rects)):
                 if instrument_rects[i].collidepoint(event.pos):
                     active_instruments[i] *= -1
