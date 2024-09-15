@@ -10,6 +10,7 @@ black = (0, 0, 0)
 white = (255, 255, 255)
 dark_gray = (50, 50, 50)
 gray = (128, 128, 128)
+light_gray = (180, 180, 180)
 green = (0, 255, 0)
 gold = (212, 175, 55)
 blue = (0, 255, 255)
@@ -20,6 +21,7 @@ big_font = pygame.font.Font('fonts/Oswald-Heavy.ttf', 64)
 label_font = pygame.font.Font('fonts/Oswald-Bold.ttf', 32)
 medium_font = pygame.font.Font('fonts/Oswald-Medium.ttf', 24)
 
+index = 100
 fps = 60
 clock = pygame.time.Clock()
 beats = 8
@@ -113,7 +115,7 @@ def draw_grid(clicks, beat, actives):
 def draw_save_menu(name, typing):
     pygame.draw.rect(screen, black, [0, 0, WIDTH, HEIGHT])
     menu_text = big_font.render('SAVE MENU: Enter a name for save', True, white)
-    screen.blit(menu_text, (285, 40))
+    screen.blit(menu_text, (285, 19))
     saving_box = pygame.draw.rect(screen, gray, [WIDTH // 2 - 200, HEIGHT * 0.75 - 5, 400, 100], 0, 5)
     saving_text = big_font.render('Save', True, white)
     screen.blit(saving_text, (WIDTH // 2 - 70, HEIGHT * 0.75))
@@ -127,12 +129,50 @@ def draw_save_menu(name, typing):
     screen.blit(entry_text, (430, 250))
     return exit, saving_box, entry_box
 
-def draw_load_menu():
+def draw_load_menu(index):
+    loaded_clicked = []
+    loaded_beats = 0
+    loaded_bpm = 0
     pygame.draw.rect(screen, black, [0, 0, WIDTH, HEIGHT])
     exit = pygame.draw.rect(screen, gray, [WIDTH - 200, HEIGHT - 100, 180, 90], 0, 5)
+    menu_text = big_font.render('LOAD MENU: Select a beat to load', True, white)
+    screen.blit(menu_text, (285, 19))
+    loading_box = pygame.draw.rect(screen, gray, [WIDTH // 2 - 200, HEIGHT * 0.87 - 5, 400, 100], 0, 5)
+    loading_text = big_font.render('Load', True, white)
+    screen.blit(loading_text, (WIDTH // 2 - 70, HEIGHT * 0.87))
+    delete_box = pygame.draw.rect(screen, gray, [WIDTH // 2 - 485, HEIGHT * 0.87 - 5, 200, 100], 0, 5)
+    delete_text = label_font.render('Delete Beat', True, white)
+    screen.blit(delete_text, (WIDTH // 2 - 460, HEIGHT * 0.87 + 20))
     exit_text = label_font.render('Close', True, white)
     screen.blit(exit_text, (WIDTH - 155, HEIGHT - 75))
-    return exit
+    loaded_rect = pygame.draw.rect(screen, gray, [190, 100, 1000, 580], 5, 5)
+    if 0 <= index < len(savelist):
+        pygame.draw.rect(screen, light_gray, [190, 100 + index * 50, 1000, 50])
+    for beat in range(len(savelist)):
+        if beat < 10:
+            beat_clicked = []
+            row_text = medium_font.render(f'{beat + 1}', True, white)
+            screen.blit(row_text, (200, 100 + beat * 50))
+            name_index_start = savelist[beat].index('name: ') + 6
+            name_index_end = savelist[beat].index(', beats:')
+            name_text = medium_font.render(savelist[beat][name_index_start:name_index_end], True, white)
+            screen.blit(name_text, (240, 100 + beat * 50))
+        if 0 <= index < len(savelist) and beat == index:
+            beat_index_end = savelist[beat].index(', bpm:')
+            loaded_beats = int(savelist[beat][name_index_end + 8:beat_index_end])
+            bpm_index_end = savelist[beat].index(', selected:')
+            loaded_bpm = int(savelist[beat][beat_index_end + 6:bpm_index_end])
+            loaded_clicks_string = savelist[beat][bpm_index_end + 14: -3]
+            loaded_clicks_rows = list(loaded_clicks_string.split('], ['))
+            for row in range(len(loaded_clicks_rows)):
+                loaded_clicks_row = (loaded_clicks_rows[row].split(', '))
+                for item in range(len(loaded_clicks_row)):
+                    if loaded_clicks_row[item] == '1' or loaded_clicks_row[item] == '-1':
+                        loaded_clicks_row[item] = int(loaded_clicks_row[item])
+                beat_clicked.append(loaded_clicks_row)
+                loaded_clicked = beat_clicked
+    loaded_info = [loaded_beats, loaded_bpm, loaded_clicked]
+    return exit, loading_box, delete_box, loaded_rect, loaded_info
 
 # main game loop
 run = True
@@ -193,7 +233,7 @@ while run:
     if save_menu:
         exit_box, saving_box, entry_rectangle = draw_save_menu(beat_name, typing)
     if load_menu:
-        exit_box = draw_load_menu()
+        exit_box, loading_box, delete_box, loaded_rect, loaded_info = draw_load_menu(index)
     if beat_changed:
         play_notes()
         beat_changed = False
@@ -242,21 +282,43 @@ while run:
                 playing = False
                 beat_name = ''
                 typing = False
-            elif entry_rectangle.collidepoint(event.pos):
-                if typing:
+                
+            if load_menu:
+                if loaded_rect.collidepoint(event.pos):
+                    index = (event.pos[1] - 100) // 50
+                if delete_box.collidepoint(event.pos):
+                    if 0 <= index < len(savelist):
+                        file = open('savelist.txt', 'w')
+                        savelist.pop(index)
+                        for i in range(len(savelist)):
+                            file.write(str(savelist[i]))
+                        file.close()
+                        
+                if loading_box.collidepoint(event.pos):
+                    if 0 <= index < len(savelist):
+                        beats = loaded_info[0]
+                        bpm = loaded_info[1]
+                        clicked = loaded_info[2]
+                        index = 100
+                        load_menu = False
+                        playing = False
+
+            if save_menu:
+                if entry_rectangle.collidepoint(event.pos):
+                    if typing:
+                        typing = False
+                    elif not typing:
+                        typing = True
+                if saving_box.collidepoint(event.pos):
+                    file = open('savelist.txt', 'w')
+                    savelist.append(f'\nname: {beat_name}, beats: {beats}, bpm: {bpm}, selected: {clicked}')
+                    for i in range(len(savelist)):
+                        file.write(str(savelist[i]))
+                    file.close()
+                    save_menu = False
                     typing = False
-                elif not typing:
-                    typing = True
-            elif saving_box.collidepoint(event.pos):
-                file = open('savelist.txt', 'w')
-                savelist.append(f'\nname: {beat_name}, beats: {beats}, bpm: {bpm}, selected: {clicked}')
-                for i in range(len(savelist)):
-                    file.write(str(savelist[i]))
-                file.close()
-                save_menu = False
-                typing = False
-                beat_name = ''
-                playing = False
+                    beat_name = ''
+                    playing = False
 
         if event.type == pygame.TEXTINPUT and typing:
             beat_name += event.text
