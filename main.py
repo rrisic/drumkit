@@ -38,6 +38,8 @@ savelist = []
 save_file = open('savelist.txt', 'r')
 for line in save_file:
     savelist.append(line)
+beat_name = ''
+typing = False
 
 # sounds
 hi_hat = mixer.Sound('sounds/HiHat 002 - Matty.wav')
@@ -66,7 +68,7 @@ def play_notes():
                 floor_tom.play()
 
 def draw_grid(clicks, beat, actives):
-    left_box = pygame.draw.rect(screen, gray, [0, 0, 200, HEIGHT], 5)
+    left_box = pygame.draw.rect(screen, gray, [0, 0, 200, HEIGHT - 195], 5)
     bottom_box = pygame.draw.rect(screen, gray, [0, HEIGHT - 200, WIDTH, 200], 5)
     boxes = []
     colors = [gray, white, gray]
@@ -96,7 +98,7 @@ def draw_grid(clicks, beat, actives):
                     color = dark_gray
             rect = pygame.draw.rect(screen, color, [i * ((WIDTH - 200) // beats) + 205, 
                                                   (j * 100) + 5, ((WIDTH - 200) // beats) - 10, 
-                                                  ((HEIGHT - 200) // instruments) - 10], 0, 3)
+                                                  ((HEIGHT - 200) // instruments) - 10], 0)
             pygame.draw.rect(screen, gold, [i * ((WIDTH - 200) // beats) + 200, 
                                                   (j * 100), ((WIDTH - 200) // beats), 
                                                   ((HEIGHT - 200) // instruments)], 5, 5)
@@ -108,12 +110,22 @@ def draw_grid(clicks, beat, actives):
         active = pygame.draw.rect(screen, blue, [beat * ((WIDTH - 200) // beats) + 200, 0, ((WIDTH - 200) // beats), instruments * 100], 5, 3)
     return boxes
 
-def draw_save_menu():
+def draw_save_menu(name, typing):
     pygame.draw.rect(screen, black, [0, 0, WIDTH, HEIGHT])
+    menu_text = big_font.render('SAVE MENU: Enter a name for save', True, white)
+    screen.blit(menu_text, (285, 40))
+    saving_box = pygame.draw.rect(screen, gray, [WIDTH // 2 - 200, HEIGHT * 0.75 - 5, 400, 100], 0, 5)
+    saving_text = big_font.render('Save', True, white)
+    screen.blit(saving_text, (WIDTH // 2 - 70, HEIGHT * 0.75))
     exit = pygame.draw.rect(screen, gray, [WIDTH - 200, HEIGHT - 100, 180, 90], 0, 5)
     exit_text = label_font.render('Close', True, white)
     screen.blit(exit_text, (WIDTH - 155, HEIGHT - 75))
-    return exit
+    if typing:
+        pygame.draw.rect(screen, dark_gray, [400, 200, 600, 200], 0, 5)
+    entry_box = pygame.draw.rect(screen, gray, [400, 200, 600, 200], 5, 5)
+    entry_text = label_font.render(f'{name}', True, white)
+    screen.blit(entry_text, (430, 250))
+    return exit, saving_box, entry_box
 
 def draw_load_menu():
     pygame.draw.rect(screen, black, [0, 0, WIDTH, HEIGHT])
@@ -179,7 +191,7 @@ while run:
     screen.blit(clear_text, (1170, HEIGHT - 120))
 
     if save_menu:
-        exit_box = draw_save_menu()
+        exit_box, saving_box, entry_rectangle = draw_save_menu(beat_name, typing)
     if load_menu:
         exit_box = draw_load_menu()
     if beat_changed:
@@ -228,6 +240,29 @@ while run:
                 save_menu = False
                 load_menu = False
                 playing = False
+                beat_name = ''
+                typing = False
+            elif entry_rectangle.collidepoint(event.pos):
+                if typing:
+                    typing = False
+                elif not typing:
+                    typing = True
+            elif saving_box.collidepoint(event.pos):
+                file = open('savelist.txt', 'w')
+                savelist.append(f'\nname: {beat_name}, beats: {beats}, bpm: {bpm}, selected: {clicked}')
+                for i in range(len(savelist)):
+                    file.write(str(savelist[i]))
+                file.close()
+                save_menu = False
+                typing = False
+                beat_name = ''
+                playing = False
+
+        if event.type == pygame.TEXTINPUT and typing:
+            beat_name += event.text
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_BACKSPACE and len(beat_name) > 0 and typing:
+                beat_name = beat_name[:-1]
 
     beat_length = (fps * 60) // bpm 
     if playing:
